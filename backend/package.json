@@ -1,13 +1,25 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Smart Digital Banking System with Real-Time Fraud Detection - Backend",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "setup-db": "node scripts/setupDatabaseValidation.js",
+    "benchmark": "node scripts/benchmarkIndex.js",
+    "simulate": "node scripts/simulateFraud.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "banking",
+    "fraud-detection",
+    "mongodb",
+    "change-streams",
+    "transactions",
+    "rbac"
+  ],
+  "author": "Srijan Sengupta & Shubho Das",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {

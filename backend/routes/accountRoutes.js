@@ -3,17 +3,21 @@ const router = express.Router();
 
 const {
     createAccount,
-    accountReport
+    depositFunds,
+    accountReport,
+    getCustomerAccounts,
+    getAccountByNumber,
+    getAllAccounts
 } = require("../controllers/accountController");
 
-router.post(
-    "/create",
-    createAccount
-);
+const { verifyToken, requireAdmin } = require("../middleware/authMiddleware");
 
-router.get(
-    "/report",
-    accountReport
-);
+// Account Management Endpoints
+router.post("/create", verifyToken, createAccount);
+router.post("/deposit", verifyToken, depositFunds);
+router.get("/report", verifyToken, accountReport);
+router.get("/customer/:customerId", verifyToken, getCustomerAccounts);
+router.get("/details/:accountNumber", verifyToken, getAccountByNumber);
+router.get("/all", verifyToken, requireAdmin, getAllAccounts);
 
 module.exports = router;

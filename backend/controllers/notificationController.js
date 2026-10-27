@@ -1,34 +1,42 @@
-const Notification =
-require("../models/Notification");
+const Notification = require("../models/Notification");
 
-exports.createNotification =
-async (req,res)=>{
+/**
+ * Get active unexpired notifications (TTL backed)
+ */
+exports.getNotifications = async (req, res) => {
+    try {
+        const notifications = await Notification.find()
+            .sort({ createdAt: -1 })
+            .limit(20);
 
-    try{
+        res.status(200).json(notifications);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
 
-        const notification =
-        new Notification({
+/**
+ * Create a notification manually (or via system alert)
+ */
+exports.createNotification = async (req, res) => {
+    try {
+        const { message, type = "INFO", metadata = {} } = req.body;
 
-            message:
-            req.body.message
-
+        const notification = new Notification({
+            message,
+            type,
+            metadata
         });
 
         await notification.save();
 
         res.status(201).json({
-            message:
-            "Notification Created",
+            message: "Notification Created",
             notification
         });
-
-    }
-    catch(err){
-
+    } catch (err) {
         res.status(500).json({
             error: err.message
         });
-
     }
-
 };

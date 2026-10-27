@@ -2,9 +2,16 @@ const express = require("express");
 const router = express.Router();
 
 const {
-    transferFunds
+    transferFunds,
+    getTransferHistory,
+    spendingAnalytics
 } = require("../controllers/transferController");
 
-router.post("/transfer", transferFunds);
+const { verifyToken } = require("../middleware/authMiddleware");
+
+// Protected Transfer Endpoints
+router.post("/transfer", verifyToken, transferFunds);
+router.get("/history/:accountNumber", verifyToken, getTransferHistory);
+router.get("/analytics/spending", verifyToken, spendingAnalytics);
 
 module.exports = router;

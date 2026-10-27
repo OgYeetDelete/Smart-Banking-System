@@ -2,19 +2,37 @@ const mongoose = require("mongoose");
 
 const customerSchema = new mongoose.Schema(
 {
-    name: String,
+    name: {
+        type: String,
+        required: [true, "Customer name is required"],
+        trim: true
+    },
 
     email: {
         type: String,
+        required: [true, "Email address is required"],
         unique: true,
-        index: true
+        index: true,
+        lowercase: true,
+        trim: true
     },
 
-    password: String,
+    password: {
+        type: String,
+        required: [true, "Password is required"]
+    },
 
-    phone: String
+    phone: {
+        type: String,
+        required: [true, "Phone number is required"]
+    },
+
+    role: {
+        type: String,
+        enum: ["customer", "admin"],
+        default: "customer"
+    }
 },
-
 {
     timestamps: true
 });

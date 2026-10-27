@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Digital Banking & Real-Time Fraud Guard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- React 18 & Babel via CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    :root {
+      --bg-primary: #090d16;
+      --bg-card: rgba(30, 41, 59, 0.7);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-highlight: rgba(59, 130, 246, 0.3);
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.25);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.3);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(239, 68, 68, 0.1) 0px, transparent 50%);
+      background-attachment: fixed;
+    }
+    .mono { font-family: var(--font-mono); }
+    .glass-panel {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 0.9rem;
+      cursor: pointer; border: none; transition: all 0.2s ease;
+    }
+    .btn-primary { background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; box-shadow: 0 4px 15px var(--primary-glow); }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+    .btn-danger { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+    .btn-secondary { background: rgba(255, 255, 255, 0.05); color: var(--text-main); border: 1px solid var(--border-color); }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
+    .btn-sm { padding: 6px 14px; font-size: 0.8rem; border-radius: 8px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px;
+      border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    }
+    .badge-critical { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .badge-high { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4); }
+    .badge-medium { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.4); }
+    .badge-success { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.4); }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+    .form-input, .form-select {
+      width: 100%; padding: 12px 14px; background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-color); border-radius: 10px; color: white; outline: none;
+    }
+    .form-input:focus, .form-select:focus { border-color: var(--primary); }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(3, 7, 18, 0.85); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px;
+    }
+    .modal-box {
+      width: 100%; max-width: 520px; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px; padding: 28px; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+    }
+    .custom-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+    .custom-table th { padding: 12px 16px; color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; text-align: left; }
+    .custom-table td { padding: 14px 16px; background: rgba(30, 41, 59, 0.4); color: var(--text-main); font-size: 0.9rem; }
+    .custom-table tr td:first-child { border-top-left-radius: 10px; border-bottom-left-radius: 10px; }
+    .custom-table tr td:last-child { border-top-right-radius: 10px; border-bottom-right-radius: 10px; }
+    .pulse-indicator { width: 10px; height: 10px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    const API_BASE = "http://localhost:5000/api";
+
+    function getAuthHeaders() {
+      const token = localStorage.getItem("bank_token");
+      return token ? { "Content-Type": "application/json", "Authorization": `Bearer ${token}` } : { "Content-Type": "application/json" };
+    }
+
+    async function fetchAPI(endpoint, options = {}) {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers: { ...getAuthHeaders(), ...options.headers }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || "Request failed");
+      return data;
+    }
+
+    function App() {
+      const [user, setUser] = useState(null);
+      const [activeTab, setActiveTab] = useState("customer");
+      const [accounts, setAccounts] = useState([]);
+      const [selectedAccount, setSelectedAccount] = useState(null);
+      const [transactions, setTransactions] = useState([]);
+      const [beneficiaries, setBeneficiaries] = useState([]);
+      const [myLoans, setMyLoans] = useState([]);
+      const [adminLoans, setAdminLoans] = useState([]);
+      const [loanStats, setLoanStats] = useState([]);
+      const [fraudAlerts, setFraudAlerts] = useState([]);
+      const [accountReport, setAccountReport] = useState([]);
+      const [notifications, setNotifications] = useState([]);
+      const [securityLogs, setSecurityLogs] = useState([]);
+
+      // Modals
+      const [transferOpen, setTransferOpen] = useState(false);
+      const [accountOpen, setAccountOpen] = useState(false);
+      const [beneficiaryOpen, setBeneficiaryOpen] = useState(false);
+      const [loanOpen, setLoanOpen] = useState(false);
+      const [depositOpen, setDepositOpen] = useState(false);
+      const [transferTo, setTransferTo] = useState("");
+
+      // Auth state
+      const [authMode, setAuthMode] = useState("login");
+      const [authForm, setAuthForm] = useState({ name: "", email: "", password: "", phone: "", role: "customer" });
+      const [authError, setAuthError] = useState("");
+
+      useEffect(() => {
+        const u = localStorage.getItem("bank_user");
+        if (u) {
+          try {
+            const parsed = JSON.parse(u);
+            setUser(parsed);
+            if (parsed.role === "admin") setActiveTab("admin");
+          } catch(e) {}
+        }
+      }, []);
+
+      useEffect(() => {
+        if (user) {
+          loadCustomerData();
+          loadNotifications();
+        }
+      }, [user]);
+
+      useEffect(() => {
+        if (user && selectedAccount) {
+          loadTransactions(selectedAccount.accountNumber);
+        }
+      }, [selectedAccount]);
+
+      useEffect(() => {
+        if (user?.role === "admin") {
+          loadAdminData();
+          const timer = setInterval(loadAdminData, 3000);
+          return () => clearInterval(timer);
+        }
+      }, [user]);
+
+      const loadCustomerData = async () => {
+        try {
+          const accs = await fetchAPI(`/accounts/customer/${user.id}`);
+          setAccounts(accs);
+          if (accs.length > 0) {
+            // Keep selected account or choose the first one
+            setSelectedAccount(prev => {
+              if (!prev) return accs[0];
+              const updated = accs.find(a => a._id === prev._id);
+              return updated || accs[0];
+            });
+          }
+          const bList = await fetchAPI(`/beneficiaries/customer/${user.id}`).catch(() => []);
+          const lList = await fetchAPI(`/loans/customer/${user.id}`).catch(() => []);
+          setBeneficiaries(bList);
+          setMyLoans(lList);
+        } catch(e) { console.error(e); }
+      };
+
+      const loadTransactions = async (accNum) => {
+        try {
+          const txs = await fetchAPI(`/transfers/history/${accNum}`);
+          setTransactions(txs);
+        } catch(e) { console.error(e); }
+      };
+
+      const loadNotifications = async () => {
+        try {
+          const notifs = await fetchAPI("/notifications").catch(() => []);
+          setNotifications(notifs);
+        } catch(e) {}
+      };
+
+      const loadAdminData = async () => {
+        try {
+          const [alerts, rep, lAll, lStats, logs] = await Promise.all([
+            fetchAPI("/fraud-alerts"),
+            fetchAPI("/accounts/report"),
+            fetchAPI("/loans/all"),
+            fetchAPI("/loans/stats"),
+            fetchAPI("/customers/security-logs")
+          ]);
+          setFraudAlerts(alerts);
+          setAccountReport(rep);
+          setAdminLoans(lAll);
+          setLoanStats(lStats);
+          setSecurityLogs(logs);
+        } catch(e) { console.error(e); }
+      };
+
+      const handleUpdateLoanStatus = async (loanId, status) => {
+        try {
+          const res = await fetchAPI(`/loans/${loanId}/status`, {
+            method: "PATCH",
+            body: JSON.stringify({ status })
+          });
+          alert(res.message);
+          loadAdminData();
+        } catch(err) {
+          alert("Failed to update loan: " + err.message);
+        }
+      };
+
+      const handleAuth = async (e) => {
+        e.preventDefault();
+        setAuthError("");
+        try {
+          if (authMode === "register") {
+            await fetchAPI("/customers/register", { method: "POST", body: JSON.stringify(authForm) });
+          }
+          const res = await fetchAPI("/customers/login", {
+            method: "POST",
+            body: JSON.stringify({ email: authForm.email, password: authForm.password })
+          });
+          localStorage.setItem("bank_token", res.token);
+          localStorage.setItem("bank_user", JSON.stringify(res.customer));
+          setUser(res.customer);
+          if (res.customer.role === "admin") setActiveTab("admin");
+        } catch(err) {
+          setAuthError(err.message);
+        }
+      };
+
+      const handleLogout = () => {
+        localStorage.clear();
+        setUser(null);
+        setAccounts([]);
+        setSelectedAccount(null);
+        setActiveTab("customer");
+      };
+
+      // -------------------------------------------------------------
+      // Auth Screen
+      // -------------------------------------------------------------
+      if (!user) {
+        return (
+          <div className="modal-overlay">
+            <div className="modal-box" style={{ maxWidth: "460px" }}>
+              <div style={{ textAlign: "center", marginBottom: "20px" }}>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 800 }}>Smart Digital Banking</h2>
+                <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginTop: "4px" }}>Review 3 • Complete Banking & Fraud Guard</p>
+              </div>
+
+              {authError && <div style={{ background: "rgba(239, 68, 68, 0.15)", color: "#fca5a5", padding: "10px", borderRadius: "8px", fontSize: "0.85rem", marginBottom: "14px" }}>{authError}</div>}
+
+              <form onSubmit={handleAuth}>
+                {authMode === "register" && (
+                  <>
+                    <div className="form-group">
+                      <label className="form-label">Full Name</label>
+                      <input className="form-input" placeholder="e.g. Shubho Das" required value={authForm.name} onChange={e => setAuthForm({...authForm, name: e.target.value})} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Phone</label>
+                      <input className="form-input" placeholder="e.g. 9876543210" required value={authForm.phone} onChange={e => setAuthForm({...authForm, phone: e.target.value})} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Role</label>
+                      <select className="form-select" value={authForm.role} onChange={e => setAuthForm({...authForm, role: e.target.value})}>
+                        <option value="customer">Customer</option>
+                        <option value="admin">Administrator (Fraud Guard)</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                <div className="form-group">
+                  <label className="form-label">Email</label>
+                  <input className="form-input" type="email" placeholder="name@bank.com" required value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Password</label>
+                  <input className="form-input" type="password" placeholder="••••••••" required value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} />
+                </div>
+                <button type="submit" className="btn btn-primary" style={{ width: "100%", padding: "12px", marginTop: "10px" }}>
+                  {authMode === "register" ? "Create Account & Login" : "Sign In to Bank"}
+                </button>
+              </form>
+
+              <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid var(--border-color)", textAlign: "center" }}>
+                <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>Quick Demo Fill: </span>
+                <button type="button" onClick={() => setAuthForm({ ...authForm, email: "shubho@gmail.com", password: "userpass123" })} className="btn btn-secondary btn-sm" style={{ margin: "4px" }}>Customer</button>
+                <button type="button" onClick={() => setAuthForm({ ...authForm, email: "admin@bank.com", password: "adminpassword123" })} className="btn btn-secondary btn-sm" style={{ margin: "4px" }}>Admin</button>
+              </div>
+
+              <div style={{ textAlign: "center", marginTop: "14px", fontSize: "0.85rem", color: "var(--text-muted)" }}>
+                {authMode === "login" ? "Don't have an account? " : "Already registered? "}
+                <a href="#" onClick={(e) => { e.preventDefault(); setAuthMode(authMode === "login" ? "register" : "login"); }} style={{ color: "var(--primary)", fontWeight: 600 }}>
+                  {authMode === "login" ? "Register" : "Sign In"}
+                </a>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // -------------------------------------------------------------
+      // Main App Layout
+      // -------------------------------------------------------------
+      return (
+        <div>
+          {/* Header */}
+          <header className="glass-panel" style={{ margin: "16px 24px", padding: "14px 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", padding: "10px", borderRadius: "12px" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div>
+                <h1 style={{ fontSize: "1.15rem", fontWeight: 800 }}>Smart Digital Banking</h1>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div className="pulse-indicator"></div>
+                  <span style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>MongoDB Change Streams Active</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button onClick={() => { setActiveTab("customer"); loadCustomerData(); }} className={`btn btn-sm ${activeTab === "customer" ? "btn-primary" : "btn-secondary"}`}>
+                Customer Portal
+              </button>
+              {user.role === "admin" && (
+                <button onClick={() => { setActiveTab("admin"); loadAdminData(); }} className={`btn btn-sm ${activeTab === "admin" ? "btn-danger" : "btn-secondary"}`}>
+                  Admin & Fraud Center ({fraudAlerts.length})
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "0.9rem", fontWeight: 700 }}>{user.name}</div>
+                <span className={`badge ${user.role === "admin" ? "badge-critical" : "badge-medium"}`}>{user.role}</span>
+              </div>
+              <button onClick={handleLogout} className="btn btn-secondary btn-sm">Exit</button>
+            </div>
+          </header>
+
+          {/* Notifications Banner */}
+          {notifications.length > 0 && (
+            <div style={{ margin: "0 24px 20px", padding: "12px 18px", background: "rgba(245, 158, 11, 0.12)", border: "1px solid rgba(245, 158, 11, 0.3)", borderRadius: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "0.85rem" }}>🔔 <strong>Live Notification:</strong> {notifications[0].message}</span>
+              <span style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Auto-purged via TTL</span>
+            </div>
+          )}
+
+          {/* Tab 1: Customer View */}
+          {activeTab === "customer" ? (
+            <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 24px 48px" }}>
+              
+              {/* Top Row: Balance, Accounts, Beneficiaries */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px", marginBottom: "28px" }}>
+                
+                {/* Balance Card */}
+                <div className="glass-panel" style={{ padding: "24px", background: "linear-gradient(135deg, rgba(30, 58, 138, 0.6), rgba(15, 23, 42, 0.9))", borderColor: "rgba(59, 130, 246, 0.4)" }}>
+                  <div style={{ fontSize: "0.8rem", color: "#93c5fd", fontWeight: 600 }}>{selectedAccount ? `${selectedAccount.accountType} ACCOUNT` : "NO ACCOUNT"}</div>
+                  <div style={{ fontSize: "2.4rem", fontWeight: 800, margin: "14px 0", color: "white" }}>
+                    ₹{selectedAccount ? selectedAccount.balance?.toLocaleString() : "0"}
+                  </div>
+                  <div className="mono" style={{ fontSize: "0.9rem", color: "#cbd5e1" }}>
+                    {selectedAccount ? `•••• •••• ${selectedAccount.accountNumber}` : "Open an account below"}
+                  </div>
+                  <div style={{ display: "flex", gap: "8px", marginTop: "24px" }}>
+                    <button onClick={() => setTransferOpen(true)} className="btn btn-primary btn-sm" style={{ flex: 1 }}>Transfer Funds</button>
+                    <button onClick={() => setLoanOpen(true)} className="btn btn-secondary btn-sm">Apply Loan</button>
+                    <button onClick={() => setDepositOpen(true)} className="btn btn-secondary btn-sm">Deposit</button>
+                  </div>
+                </div>
+
+                {/* Accounts List */}
+                <div className="glass-panel" style={{ padding: "24px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                    <h2 style={{ fontSize: "1rem", fontWeight: 700 }}>Your Accounts ({accounts.length})</h2>
+                    <button onClick={() => setAccountOpen(true)} className="btn btn-secondary btn-sm">+ Open</button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "170px", overflowY: "auto" }}>
+                    {accounts.map(acc => (
+                      <div key={acc._id} onClick={() => setSelectedAccount(acc)} style={{ padding: "10px 14px", background: selectedAccount?._id === acc._id ? "rgba(59, 130, 246, 0.2)" : "rgba(30, 41, 59, 0.4)", borderRadius: "10px", display: "flex", justifyContent: "space-between", cursor: "pointer", border: "1px solid", borderColor: selectedAccount?._id === acc._id ? "var(--primary)" : "var(--border-color)" }}>
+                        <div>
+                          <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{acc.accountType}</div>
+                          <div className="mono" style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>#{acc.accountNumber}</div>
+                        </div>
+                        <div style={{ fontWeight: 700, color: "var(--success)" }}>₹{acc.balance?.toLocaleString()}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Beneficiaries */}
+                <div className="glass-panel" style={{ padding: "24px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                    <h2 style={{ fontSize: "1rem", fontWeight: 700 }}>Beneficiaries ({beneficiaries.length})</h2>
+                    <button onClick={() => setBeneficiaryOpen(true)} className="btn btn-secondary btn-sm">+ Add</button>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "170px", overflowY: "auto" }}>
+                    {beneficiaries.length === 0 ? (
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-dim)", padding: "10px 0" }}>No saved beneficiaries.</div>
+                    ) : (
+                      beneficiaries.map(b => (
+                        <div key={b._id} style={{ padding: "8px 12px", background: "rgba(15, 23, 42, 0.5)", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontSize: "0.85rem", fontWeight: 600 }}>{b.beneficiaryName}</div>
+                            <div className="mono" style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>{b.accountNumber}</div>
+                          </div>
+                          <button onClick={() => { setTransferTo(b.accountNumber); setTransferOpen(true); }} className="btn btn-secondary btn-sm" style={{ padding: "3px 8px", fontSize: "0.75rem" }}>Send</button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Second Row: Transactions & Loan Applications */}
+              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "24px" }}>
+                
+                {/* Transactions Ledger */}
+                <div className="glass-panel" style={{ padding: "24px" }}>
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "4px" }}>Transaction History</h2>
+                  <p style={{ fontSize: "0.8rem", color: "var(--text-dim)", marginBottom: "16px" }}>Indexed query: <code>&#123; fromAccount: 1, transferredAt: -1 &#125;</code></p>
+                  {transactions.length === 0 ? (
+                    <div style={{ padding: "30px", textAlign: "center", color: "var(--text-dim)" }}>No transactions found for this account.</div>
+                  ) : (
+                    <table className="custom-table">
+                      <thead>
+                        <tr><th>Type</th><th>Account</th><th>Date</th><th>Amount</th></tr>
+                      </thead>
+                      <tbody>
+                        {transactions.map(tx => {
+                          const isDebit = tx.fromAccount === selectedAccount?.accountNumber;
+                          return (
+                            <tr key={tx._id}>
+                              <td><span className={`badge ${isDebit ? "badge-critical" : "badge-success"}`}>{isDebit ? "DEBIT" : "CREDIT"}</span></td>
+                              <td className="mono">{isDebit ? `To: ${tx.toAccount}` : `From: ${tx.fromAccount}`}</td>
+                              <td style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>{new Date(tx.transferredAt).toLocaleString()}</td>
+                              <td style={{ fontWeight: 700, color: isDebit ? "#f87171" : "#4ade80" }}>{isDebit ? `- ₹${tx.amount.toLocaleString()}` : `+ ₹${tx.amount.toLocaleString()}`}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                {/* Customer Loan Applications */}
+                <div className="glass-panel" style={{ padding: "24px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                    <div>
+                      <h2 style={{ fontSize: "1.1rem", fontWeight: 700 }}>My Loan Applications</h2>
+                      <p style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>Auto-purge TTL: 1 Year</p>
+                    </div>
+                    <button onClick={() => setLoanOpen(true)} className="btn btn-primary btn-sm">+ Apply</button>
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "320px", overflowY: "auto" }}>
+                    {myLoans.length === 0 ? (
+                      <div style={{ padding: "24px 0", textAlign: "center", color: "var(--text-dim)", fontSize: "0.85rem" }}>
+                        No loan applications found. Click <strong>+ Apply</strong> to request an Education, Home, or Personal loan!
+                      </div>
+                    ) : (
+                      myLoans.map(loan => (
+                        <div key={loan._id} style={{ padding: "12px 14px", background: "rgba(15, 23, 42, 0.6)", borderRadius: "10px", border: "1px solid var(--border-color)" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                            <span style={{ fontSize: "0.85rem", fontWeight: 700 }}>{loan.loanType}</span>
+                            <span className={`badge ${
+                              loan.status === "Approved" ? "badge-success" :
+                              loan.status === "Rejected" ? "badge-critical" : "badge-high"
+                            }`}>
+                              {loan.status}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "white" }}>
+                            ₹{loan.amount?.toLocaleString()}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "4px" }}>
+                            Submitted: {new Date(loan.createdAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          ) : (
+            /* Tab 2: Admin Fraud & Loan Management Center */
+            <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 24px 48px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <div>
+                  <h1 style={{ fontSize: "1.4rem", fontWeight: 800 }}>Fraud Guard & Loan Management Center</h1>
+                  <p style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>MongoDB Change Streams, Aggregations & Status Approval Workflow</p>
+                </div>
+                <button onClick={loadAdminData} className="btn btn-secondary btn-sm">Refresh</button>
+              </div>
+
+              {/* KPIs */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px", marginBottom: "24px" }}>
+                <div className="glass-panel" style={{ padding: "20px" }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>FLAGGED INCIDENTS</div>
+                  <div style={{ fontSize: "2rem", fontWeight: 800, color: "#f87171", marginTop: "6px" }}>{fraudAlerts.length}</div>
+                </div>
+                <div className="glass-panel" style={{ padding: "20px" }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>TOTAL FLAGGED VOLUME</div>
+                  <div style={{ fontSize: "2rem", fontWeight: 800, color: "white", marginTop: "6px" }}>
+                    ₹{fraudAlerts.reduce((a, b) => a + (b.amount || 0), 0).toLocaleString()}
+                  </div>
+                </div>
+                <div className="glass-panel" style={{ padding: "20px" }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>TOTAL LOAN APPLICATIONS</div>
+                  <div style={{ fontSize: "2rem", fontWeight: 800, color: "#60a5fa", marginTop: "6px" }}>{adminLoans.length}</div>
+                </div>
+                <div className="glass-panel" style={{ padding: "20px" }}>
+                  <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>TTL SECURITY AUDIT LOGS</div>
+                  <div style={{ fontSize: "2rem", fontWeight: 800, color: "#34d399", marginTop: "6px" }}>{securityLogs.length}</div>
+                </div>
+              </div>
+
+              {/* Live Alerts Stream */}
+              <div className="glass-panel" style={{ padding: "24px", marginBottom: "28px" }}>
+                <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "14px" }}>Live Flagged Threat Stream ({fraudAlerts.length})</h2>
+                {fraudAlerts.length === 0 ? (
+                  <div style={{ padding: "30px", textAlign: "center", color: "var(--text-dim)" }}>No fraud alerts logged yet. Perform a transfer &gt; ₹3,000 or to an unregistered account!</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {fraudAlerts.map(a => (
+                      <div key={a._id} style={{ background: "rgba(15, 23, 42, 0.8)", padding: "16px", borderRadius: "12px", border: "1px solid", borderColor: a.severity === "CRITICAL" ? "rgba(239, 68, 68, 0.4)" : "rgba(245, 158, 11, 0.4)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <span className={`badge ${a.severity === "CRITICAL" ? "badge-critical" : "badge-high"}`}>{a.severity} • {a.riskScore}% RISK</span>
+                          <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>{new Date(a.detectedAt).toLocaleTimeString()}</span>
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px", margin: "10px 0" }}>
+                          <div><span style={{ fontSize: "0.7rem", color: "var(--text-dim)" }}>FROM</span><div className="mono">{a.fromAccount}</div></div>
+                          <div><span style={{ fontSize: "0.7rem", color: "var(--text-dim)" }}>TO</span><div className="mono">{a.toAccount}</div></div>
+                          <div><span style={{ fontSize: "0.7rem", color: "var(--text-dim)" }}>AMOUNT</span><div style={{ fontWeight: 800, color: "#f87171" }}>₹{a.amount?.toLocaleString()}</div></div>
+                        </div>
+                        <div style={{ background: "rgba(0,0,0,0.3)", padding: "8px 12px", borderRadius: "8px", borderLeft: "3px solid #ef4444" }}>
+                          {a.rulesTriggered?.map((r, i) => (
+                            <div key={i} style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>• <strong>[{r.ruleCode}]</strong>: {r.description}</div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Admin Loan Approvals Table */}
+              <div className="glass-panel" style={{ padding: "24px", marginBottom: "28px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                  <div>
+                    <h2 style={{ fontSize: "1.1rem", fontWeight: 700 }}>Loan Applications Workflow (Review 2 Feature A5)</h2>
+                    <p style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>Admin review action: Approving immediately credits customer balance and records disbursement transaction</p>
+                  </div>
+                  <span className="badge badge-medium">{adminLoans.length} Applications</span>
+                </div>
+
+                {adminLoans.length === 0 ? (
+                  <div style={{ padding: "24px", textAlign: "center", color: "var(--text-dim)" }}>No loan applications submitted yet.</div>
+                ) : (
+                  <table className="custom-table">
+                    <thead>
+                      <tr><th>Applicant</th><th>Loan Type</th><th>Amount</th><th>Status</th><th>Action</th></tr>
+                    </thead>
+                    <tbody>
+                      {adminLoans.map(loan => (
+                        <tr key={loan._id}>
+                          <td>
+                            <strong>{loan.customerId?.name || "Customer"}</strong>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-dim)" }}>{loan.customerId?.email}</div>
+                          </td>
+                          <td>{loan.loanType}</td>
+                          <td style={{ fontWeight: 700, color: "white" }}>₹{loan.amount?.toLocaleString()}</td>
+                          <td>
+                            <span className={`badge ${
+                              loan.status === "Approved" ? "badge-success" :
+                              loan.status === "Rejected" ? "badge-critical" : "badge-high"
+                            }`}>
+                              {loan.status}
+                            </span>
+                          </td>
+                          <td>
+                            {loan.status === "Pending" ? (
+                              <div style={{ display: "flex", gap: "6px" }}>
+                                <button onClick={() => handleUpdateLoanStatus(loan._id, "Approved")} className="btn btn-success btn-sm">Approve & Disburse</button>
+                                <button onClick={() => handleUpdateLoanStatus(loan._id, "Rejected")} className="btn btn-danger btn-sm">Reject</button>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: "0.8rem", color: "var(--text-dim)" }}>{loan.status === "Approved" ? "Funds Disbursed" : "Rejected"}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* Aggregation Reports */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+                <div className="glass-panel" style={{ padding: "24px" }}>
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "10px" }}>Account Portfolio (MongoDB Aggregation)</h2>
+                  <table className="custom-table">
+                    <thead><tr><th>Type</th><th>Count</th><th>Total Balance</th><th>Avg Balance</th></tr></thead>
+                    <tbody>
+                      {accountReport.map(r => (
+                        <tr key={r._id}>
+                          <td><strong>{r._id}</strong></td>
+                          <td>{r.totalAccounts}</td>
+                          <td style={{ color: "var(--success)", fontWeight: 700 }}>₹{r.totalBalance?.toLocaleString()}</td>
+                          <td>₹{Math.round(r.averageBalance || 0).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="glass-panel" style={{ padding: "24px" }}>
+                  <h2 style={{ fontSize: "1.1rem", fontWeight: 700, marginBottom: "10px" }}>Loan Portfolio Stats (MongoDB Aggregation)</h2>
+                  <table className="custom-table">
+                    <thead><tr><th>Status</th><th>Count</th><th>Total Amount</th></tr></thead>
+                    <tbody>
+                      {loanStats.map(s => (
+                        <tr key={s._id}>
+                          <td><strong>{s._id}</strong></td>
+                          <td>{s.count}</td>
+                          <td style={{ color: "white", fontWeight: 700 }}>₹{s.totalAmount?.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* Transfer Modal */}
+          {transferOpen && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "16px" }}>Transfer Funds</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await fetchAPI("/transfers/transfer", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        fromAccount: selectedAccount?.accountNumber,
+                        toAccount: transferTo,
+                        amount: Number(e.target.amount.value)
+                      })
+                    });
+                    setTransferOpen(false);
+                    loadCustomerData();
+                    alert("Transfer Successful!");
+                  } catch(err) { alert(err.message); }
+                }}>
+                  <div className="form-group">
+                    <label className="form-label">From Account</label>
+                    <input className="form-input" disabled value={selectedAccount?.accountNumber} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">To Account Number</label>
+                    <input className="form-input" required value={transferTo} onChange={e => setTransferTo(e.target.value)} placeholder="e.g. 1793095400123" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Amount (₹)</label>
+                    <input className="form-input" type="number" name="amount" required min="1" placeholder="e.g. 3500" />
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "4px", display: "block" }}>
+                      * Amounts &ge; ₹3,000 or to non-beneficiaries trigger the live fraud engine!
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                    <button type="button" onClick={() => setTransferOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Confirm Transfer</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Loan Application Modal */}
+          {loanOpen && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "16px" }}>Apply for a Bank Loan</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await fetchAPI("/loans/apply", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        customerId: user.id,
+                        loanType: e.target.loanType.value,
+                        amount: Number(e.target.amount.value)
+                      })
+                    });
+                    setLoanOpen(false);
+                    loadCustomerData();
+                    alert("Loan Application Submitted Successfully! It is now pending admin review.");
+                  } catch(err) { alert(err.message); }
+                }}>
+                  <div className="form-group">
+                    <label className="form-label">Loan Type</label>
+                    <select name="loanType" className="form-select">
+                      <option value="Education Loan">Education Loan</option>
+                      <option value="Personal Loan">Personal Loan</option>
+                      <option value="Home Loan">Home Loan</option>
+                      <option value="Vehicle Loan">Vehicle Loan</option>
+                      <option value="Business Loan">Business Loan</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Requested Loan Amount (₹)</label>
+                    <input name="amount" type="number" className="form-input" required min="1000" placeholder="e.g. 500000" />
+                    <span style={{ fontSize: "0.75rem", color: "var(--text-dim)", marginTop: "4px", display: "block" }}>
+                      * Application is stamped with MongoDB TTL (1 year expiration) and default status 'Pending'.
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                    <button type="button" onClick={() => setLoanOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Submit Application</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* New Account Modal */}
+          {accountOpen && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "16px" }}>Open New Account</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await fetchAPI("/accounts/create", { method: "POST", body: JSON.stringify({ customerId: user.id, accountType: e.target.type.value }) });
+                    setAccountOpen(false);
+                    loadCustomerData();
+                  } catch(err) { alert(err.message); }
+                }}>
+                  <div className="form-group">
+                    <label className="form-label">Account Type</label>
+                    <select name="type" className="form-select">
+                      <option value="Savings">Savings (₹5,000 Initial)</option>
+                      <option value="Current">Current (₹5,000 Initial)</option>
+                      <option value="Salary">Salary (₹5,000 Initial)</option>
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                    <button type="button" onClick={() => setAccountOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Open</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Beneficiary Modal */}
+          {beneficiaryOpen && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "16px" }}>Add Beneficiary</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await fetchAPI("/beneficiaries/add", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        customerId: user.id,
+                        beneficiaryName: e.target.name.value,
+                        accountNumber: e.target.acc.value
+                      })
+                    });
+                    setBeneficiaryOpen(false);
+                    loadCustomerData();
+                  } catch(err) { alert(err.message); }
+                }}>
+                  <div className="form-group">
+                    <label className="form-label">Full Name</label>
+                    <input name="name" className="form-input" required placeholder="e.g. Rahul Sharma" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Account Number</label>
+                    <input name="acc" className="form-input" required placeholder="13-digit account number" />
+                  </div>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                    <button type="button" onClick={() => setBeneficiaryOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Deposit Modal */}
+          {depositOpen && (
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3 style={{ fontSize: "1.2rem", fontWeight: 700, marginBottom: "16px" }}>Deposit Funds</h3>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await fetchAPI("/accounts/deposit", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        accountNumber: selectedAccount?.accountNumber,
+                        amount: Number(e.target.amount.value)
+                      })
+                    });
+                    setDepositOpen(false);
+                    loadCustomerData();
+                  } catch(err) { alert(err.message); }
+                }}>
+                  <div className="form-group">
+                    <label className="form-label">Account Number</label>
+                    <input className="form-input" disabled value={selectedAccount?.accountNumber} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Deposit Amount (₹)</label>
+                    <input name="amount" type="number" className="form-input" required min="1" placeholder="e.g. 50000" />
+                  </div>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+                    <button type="button" onClick={() => setDepositOpen(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                    <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Deposit</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

@@ -2,9 +2,14 @@ const express = require("express");
 const router = express.Router();
 
 const {
-    addBeneficiary
+    addBeneficiary,
+    getBeneficiariesByCustomer
 } = require("../controllers/beneficiaryController");
 
-router.post("/add", addBeneficiary);
+const { verifyToken } = require("../middleware/authMiddleware");
+
+// Beneficiary Endpoints
+router.post("/add", verifyToken, addBeneficiary);
+router.get("/customer/:customerId", verifyToken, getBeneficiariesByCustomer);
 
 module.exports = router;

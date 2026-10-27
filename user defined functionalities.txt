@@ -1,59 +1,157 @@
-to register a new user: http://localhost:5000/api/customers/register
-Body text: 
-{
-    "name": "Rahul",
-    "email": "rahul@gmail.com",
-    "password": "123456",
-    "phone": "9876543211"
-}
+================================================================================
+SMART DIGITAL BANKING SYSTEM - API ENDPOINTS REFERENCE
+Review 2 Base + Review 3 (Final Review) Advanced Features
+================================================================================
 
-to login a user: http://localhost:5000/api/customers/login
-Body text:
-{
-    "email": "rahul@gmail.com", //mail address of user
-    "password": "123456" //password of the user (make sure to remember this)
-}
+NOTE: Protected endpoints require the header:
+  Authorization: Bearer <your_jwt_token_here>
 
-to create a bank account for some existing user: http://localhost:5000/api/accounts/create
-Body text:
-{
-    "customerId": "6ab603a1dd6f2504c9908bcf", //from MongoDB Atlas
-    "accountType": "Savings"
-}
+--- 1. CUSTOMER & AUTHENTICATION (with RBAC & TTL Security Logs) ---
+Register Customer:
+  POST http://localhost:5000/api/customers/register
+  Body (JSON):
+  {
+      "name": "Rahul Sharma",
+      "email": "rahul@gmail.com",
+      "password": "password123",
+      "phone": "9876543210",
+      "role": "customer" // "customer" or "admin"
+  }
 
-to transfer funds: http://localhost:5000/api/transfers/transfer
-Body text:
-{
-    "fromAccount": "sender_account_number", //account number, from MongoDB
-    "toAccount": "receiver_account_number", //account number from MongoDB
-    "amount": 1000
-}
+Login Customer:
+  POST http://localhost:5000/api/customers/login
+  Body (JSON):
+  {
+      "email": "rahul@gmail.com",
+      "password": "password123"
+  }
+  Returns JWT carrying customer id, email, and role.
+  * Also logs login attempt (success/failure) into SecurityLog collection with 5-minute TTL!
 
-for beneficiaries: http://localhost:5000/api/beneficiaries/add
-Body text:
-{
-    "customerId": "6ab59ee30486b063f02a59d4", // Shubho's customerID (the person saving the beneficiary)
-    "beneficiaryName": "Rahul", // Rahul's name
-    "accountNumber": "1790313516202" // Rahul's bank account number
-}
+Get All Customers (Admin Only):
+  GET http://localhost:5000/api/customers/all
+  Header: Authorization: Bearer <admin_token>
 
-for loans: http://localhost:5000/api/loans/apply
-Body text:
-{
-    "customerId": "6ab59ee30486b063f02a59d4", // customer applying for the loan
-    "loanType": "Education Loan", // type of loan
-    "amount": 500000 // requested loan amount
-}
+Get Real-Time Security & Login Attempt Logs (Admin Only, TTL Backed):
+  GET http://localhost:5000/api/customers/security-logs
+  Header: Authorization: Bearer <admin_token>
 
 
+--- 2. BANK ACCOUNT MANAGEMENT ---
+Create Bank Account:
+  POST http://localhost:5000/api/accounts/create
+  Header: Authorization: Bearer <token>
+  Body (JSON):
+  {
+      "customerId": "6ab603a1dd6f2504c9908bcf",
+      "accountType": "Savings" // "Savings", "Current", or "Salary"
+  }
+
+Get Accounts of Customer:
+  GET http://localhost:5000/api/accounts/customer/:customerId
+  Header: Authorization: Bearer <token>
+
+Account Details by Account Number:
+  GET http://localhost:5000/api/accounts/details/:accountNumber
+  Header: Authorization: Bearer <token>
+
+Account Summary Report (Aggregation Pipeline):
+  GET http://localhost:5000/api/accounts/report
+  Header: Authorization: Bearer <token>
 
 
+--- 3. FUND TRANSFERS & LEDGER (MongoDB Transactions) ---
+Transfer Funds (Atomic Transaction + Change Stream Trigger):
+  POST http://localhost:5000/api/transfers/transfer
+  Header: Authorization: Bearer <token>
+  Body (JSON):
+  {
+      "fromAccount": "1790288503708",
+      "toAccount": "1790313516202",
+      "amount": 1000
+  }
+  * Validations: sender != receiver, balance >= amount, amount > 0.
+  * Triggers real-time Change Stream fraud heuristics instantly upon commit.
+
+Transaction History (Uses Compound Index { fromAccount: 1, transferredAt: -1 }):
+  GET http://localhost:5000/api/transfers/history/:accountNumber
+  Header: Authorization: Bearer <token>
+
+Spending Analytics (Aggregation Pipeline):
+  GET http://localhost:5000/api/transfers/analytics/spending
+  Header: Authorization: Bearer <token>
 
 
+--- 4. BENEFICIARY MANAGEMENT ---
+Add Beneficiary:
+  POST http://localhost:5000/api/beneficiaries/add
+  Header: Authorization: Bearer <token>
+  Body (JSON):
+  {
+      "customerId": "6ab59ee30486b063f02a59d4",
+      "beneficiaryName": "Rahul",
+      "accountNumber": "1790313516202"
+  }
+
+List Beneficiaries for Customer:
+  GET http://localhost:5000/api/beneficiaries/customer/:customerId
+  Header: Authorization: Bearer <token>
 
 
+--- 5. LOANS & WORKFLOW ---
+Apply for Loan:
+  POST http://localhost:5000/api/loans/apply
+  Header: Authorization: Bearer <token>
+  Body (JSON):
+  {
+      "customerId": "6ab59ee30486b063f02a59d4",
+      "loanType": "Personal Loan",
+      "amount": 200000
+  }
+
+Customer Loans:
+  GET http://localhost:5000/api/loans/customer/:customerId
+  Header: Authorization: Bearer <token>
+
+Loan Portfolio Statistics (Aggregation Pipeline):
+  GET http://localhost:5000/api/loans/stats
+  Header: Authorization: Bearer <token>
+
+Update Loan Status (Admin Approval Workflow):
+  PATCH http://localhost:5000/api/loans/:id/status
+  Header: Authorization: Bearer <admin_token>
+  Body (JSON):
+  {
+      "status": "Approved" // or "Rejected"
+  }
 
 
+--- 6. REAL-TIME FRAUD DETECTION & ALERTS (Admin Protected) ---
+List All Fraud Alerts:
+  GET http://localhost:5000/api/fraud-alerts
+  Header: Authorization: Bearer <admin_token>
+  Query params: ?severity=CRITICAL&status=FLAGGED
+
+Fraud Analytics (Aggregation Pipeline):
+  GET http://localhost:5000/api/fraud-alerts/stats
+  Header: Authorization: Bearer <admin_token>
+
+Update Fraud Alert Status:
+  PATCH http://localhost:5000/api/fraud-alerts/:id/status
+  Header: Authorization: Bearer <admin_token>
+  Body (JSON):
+  {
+      "status": "UNDER_INVESTIGATION" // or "CLEARED" or "CONFIRMED_FRAUD"
+  }
 
 
+--- 7. LIVE NOTIFICATIONS (TTL-BACKED) ---
+Get Active Live Notifications:
+  GET http://localhost:5000/api/notifications
 
+Create Notification Manually:
+  POST http://localhost:5000/api/notifications/create
+  Body (JSON):
+  {
+      "message": "Security warning: Unusual login location detected."
+  }

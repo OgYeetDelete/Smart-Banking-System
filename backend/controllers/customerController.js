@@ -1,99 +1,146 @@
 const Customer = require("../models/Customer");
+const SecurityLog = require("../models/SecurityLog");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-exports.registerCustomer = async (req,res) => {
+const JWT_SECRET = process.env.JWT_SECRET || "banksecret";
 
+exports.registerCustomer = async (req, res) => {
     try {
-
         const {
             name,
             email,
             password,
-            phone
+            phone,
+            role = "customer"
         } = req.body;
 
-        const existing =
-            await Customer.findOne({ email });
+        const existing = await Customer.findOne({ email });
 
-        if(existing){
+        if (existing) {
             return res.status(400).json({
-                message:"Email already exists"
+                message: "Email already exists"
             });
         }
 
-        const hashedPassword =
-            await bcrypt.hash(password,10);
+        const hashedPassword = await bcrypt.hash(password, 10);
 
-        const customer =
-            new Customer({
-                name,
-                email,
-                password: hashedPassword,
-                phone
-            });
+        const customer = new Customer({
+            name,
+            email,
+            password: hashedPassword,
+            phone,
+            role
+        });
 
         await customer.save();
 
         res.status(201).json({
-            message:
-            "Customer Registered Successfully"
+            message: "Customer Registered Successfully",
+            customer: {
+                id: customer._id,
+                name: customer.name,
+                email: customer.email,
+                role: customer.role
+            }
         });
-
-    }
-    catch(err){
+    } catch (err) {
         res.status(500).json({
             error: err.message
         });
     }
-
 };
 
-exports.loginCustomer = async (req,res) => {
+exports.loginCustomer = async (req, res) => {
+    const { email, password } = req.body;
+    const clientIp = req.ip || req.connection.remoteAddress || "127.0.0.1";
 
     try {
+        const customer = await Customer.findOne({ email });
 
-        const { email,password } =
-            req.body;
+        if (!customer) {
+            // Log failed login attempt with TTL
+            await SecurityLog.create({
+                email: email || "unknown",
+                action: "LOGIN_FAILED",
+                status: "FAILED",
+                details: "Customer account not found",
+                ipAddress: clientIp
+            });
 
-        const customer =
-            await Customer.findOne({ email });
-
-        if(!customer){
             return res.status(404).json({
-                message:"Customer Not Found"
+                message: "Customer Not Found"
             });
         }
 
-        const match =
-            await bcrypt.compare(
-                password,
-                customer.password
-            );
+        const match = await bcrypt.compare(password, customer.password);
 
-        if(!match){
+        if (!match) {
+            // Log incorrect password attempt with TTL
+            await SecurityLog.create({
+                email,
+                action: "LOGIN_FAILED",
+                status: "FAILED",
+                details: "Incorrect password provided",
+                ipAddress: clientIp
+            });
+
             return res.status(400).json({
-                message:"Invalid Password"
+                message: "Invalid Password"
             });
         }
 
-        const token =
-            jwt.sign(
-                { id: customer._id },
-                "banksecret",
-                { expiresIn:"1d" }
-            );
-
-        res.status(200).json({
-            message:"Login Successful",
-            token
+        // Log successful login attempt with TTL
+        await SecurityLog.create({
+            email,
+            action: "LOGIN_SUCCESS",
+            status: "SUCCESS",
+            details: `Authenticated as ${customer.role || "customer"}`,
+            ipAddress: clientIp
         });
 
-    }
-    catch(err){
+        const token = jwt.sign(
+            {
+                id: customer._id,
+                email: customer.email,
+                role: customer.role || "customer",
+                name: customer.name
+            },
+            JWT_SECRET,
+            { expiresIn: "1d" }
+        );
+
+        res.status(200).json({
+            message: "Login Successful",
+            token,
+            customer: {
+                id: customer._id,
+                name: customer.name,
+                email: customer.email,
+                role: customer.role || "customer"
+            }
+        });
+    } catch (err) {
         res.status(500).json({
             error: err.message
         });
     }
+};
 
+exports.getAllCustomers = async (req, res) => {
+    try {
+        const customers = await Customer.find({}, "-password").sort({ createdAt: -1 });
+        res.status(200).json(customers);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+exports.getSecurityLogs = async (req, res) => {
+    try {
+        const logs = await SecurityLog.find().sort({ createdAt: -1 }).limit(50);
+        res.status(200).json(logs);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 };
