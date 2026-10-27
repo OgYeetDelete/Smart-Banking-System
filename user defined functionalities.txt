@@ -1,0 +1,59 @@
+to register a new user: http://localhost:5000/api/customers/register
+Body text: 
+{
+    "name": "Rahul",
+    "email": "rahul@gmail.com",
+    "password": "123456",
+    "phone": "9876543211"
+}
+
+to login a user: http://localhost:5000/api/customers/login
+Body text:
+{
+    "email": "rahul@gmail.com", //mail address of user
+    "password": "123456" //password of the user (make sure to remember this)
+}
+
+to create a bank account for some existing user: http://localhost:5000/api/accounts/create
+Body text:
+{
+    "customerId": "6ab603a1dd6f2504c9908bcf", //from MongoDB Atlas
+    "accountType": "Savings"
+}
+
+to transfer funds: http://localhost:5000/api/transfers/transfer
+Body text:
+{
+    "fromAccount": "sender_account_number", //account number, from MongoDB
+    "toAccount": "receiver_account_number", //account number from MongoDB
+    "amount": 1000
+}
+
+for beneficiaries: http://localhost:5000/api/beneficiaries/add
+Body text:
+{
+    "customerId": "6ab59ee30486b063f02a59d4", // Shubho's customerID (the person saving the beneficiary)
+    "beneficiaryName": "Rahul", // Rahul's name
+    "accountNumber": "1790313516202" // Rahul's bank account number
+}
+
+for loans: http://localhost:5000/api/loans/apply
+Body text:
+{
+    "customerId": "6ab59ee30486b063f02a59d4", // customer applying for the loan
+    "loanType": "Education Loan", // type of loan
+    "amount": 500000 // requested loan amount
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

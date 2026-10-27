@@ -1,0 +1,177 @@
+customer registration
+Login Authentication
+create bank account
+fund transfer
+add beneficiary
+loan application
+
+MongoDB transactions
+Aggregation Pipelines
+Indexing
+TTL Index
+Change Streams
+
+
+
+
+
+
+
+
+
+1. MongoDB Transactions ✅
+Where it is used
+Fund Transfer
+When:
+Shubho → Rahul ₹1000
+
+two operations happen:
+1. Deduct ₹1000 from Shubho
+2. Add ₹1000 to Rahul
+
+If the server crashes after step 1, money disappears. But...
+MongoDB Transactions ensure:
+Both operations succeed
+OR
+Neither operation happens
+
+Demo
+Transfer:
+{
+    "fromAccount": "1790288503708",
+    "toAccount": "1790313516202",
+    "amount": 1000
+}
+
+Explain:
+MongoDB transaction guarantees atomic fund transfer. Both debit and credit operations are committed together.
+
+
+
+2. Aggregation Pipeline ✅
+Create an endpoint like:
+GET /api/accounts/report
+
+Example pipeline:
+Account.aggregate([
+    {
+        $group: {
+            _id: "$accountType",
+            totalAccounts: { $sum: 1 },
+            totalBalance: { $sum: "$balance" }
+        }
+    }
+]);
+
+Output
+[
+    {
+        "_id": "Savings",
+        "totalAccounts": 2,
+        "totalBalance": 9000
+    }
+]
+
+Demo Explanation
+Aggregation Pipeline is used to generate banking reports and summaries from account data.
+
+
+
+3. Indexing ✅
+You probably already have:
+email: {
+    type: String,
+    unique: true
+}
+
+or
+customerSchema.index({ email: 1 });
+
+Check in Atlas
+customers
+→ Indexes
+
+You'll see:
+_id_
+email_1
+
+Demo Explanation
+Without index:
+MongoDB scans every customer
+
+With index:
+MongoDB directly finds customer
+
+Used during login:
+Customer.findOne({
+    email
+});
+
+
+
+4. Change Streams ✅
+You already have:
+require("./utils/changeStream");
+
+in your server.
+Example:
+Customer.watch().on("change", data => {
+    console.log("Change Detected:", data);
+});
+
+Demo
+Register a new customer:
+{
+    "name": "Akash",
+    "email": "akash@gmail.com",
+    "password": "123456",
+    "phone": "9999999999"
+}
+
+Terminal:
+Change Detected:
+insert
+customers
+
+Demo Explanation
+Change Streams provide real-time monitoring of database changes.
+
+
+
+5. TTL Index ✅
+TTL = Time To Live
+Automatically delete old records.
+Example model:
+const AuditSchema = new mongoose.Schema({
+    message: String,
+    createdAt: {
+        type: Date,
+        default: Date.now,
+        expires: 300
+    }
+});
+
+Meaning
+300 seconds = 5 minutes
+
+MongoDB automatically deletes documents after 5 minutes.
+Demo
+Insert:
+{
+    "message": "Login Attempt"
+}
+
+Wait 5 minutes.
+Document disappears.
+Demo Explanation
+TTL Index automatically removes expired records without manual deletion.
+
+
+
+
+
+
+
+
+
+
