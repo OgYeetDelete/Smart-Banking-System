@@ -1,30 +1,11 @@
 const mongoose = require("mongoose");
 
 const loanSchema = new mongoose.Schema({
+  customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", required: true },
+  loanType: { type: String, required: true },
+  amount: { type: Number, required: true },
+  status: { type: String, enum: ["Pending", "Approved", "Rejected", "Disbursed"], default: "Pending" },
+  expires: { type: Date, default: () => new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), index: { expireAfterSeconds: 0 } }
+}, { timestamps: true });
 
-    customerId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Customer"
-    },
-
-    loanType: String,
-
-    amount: Number,
-
-    status: {
-        type: String,
-        default: "Pending"
-    },
-
-    createdAt: {
-        type: Date,
-        default: Date.now,
-        expires: 31536000
-    }
-
-});
-
-module.exports = mongoose.model(
-    "Loan",
-    loanSchema
-);
+module.exports = mongoose.model("Loan", loanSchema);

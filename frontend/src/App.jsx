@@ -1,177 +1,212 @@
 import React, { useState, useEffect } from "react";
+import { api } from "./services/api";
 import Navbar from "./components/Navbar";
+import AuthModal from "./components/AuthModal";
 import CustomerDashboard from "./components/CustomerDashboard";
 import AdminFraudCenter from "./components/AdminFraudCenter";
-import AuthModal from "./components/AuthModal";
 import {
   TransferModal,
   BeneficiaryModal,
   LoanModal,
   NewAccountModal,
-  DepositModal
+  DepositModal,
+  FDModal,
+  ProfileModal,
+  StatementModal
 } from "./components/Modals";
-import { api } from "./services/api";
 
-export default function App() {
+function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("customer");
   const [accounts, setAccounts] = useState([]);
-  const [unreadAlerts, setUnreadAlerts] = useState(0);
 
-  // Modals state
+  // ── Existing modal states ──
   const [transferModalOpen, setTransferModalOpen] = useState(false);
+  const [transferPrefill, setTransferPrefill] = useState("");
   const [beneficiaryModalOpen, setBeneficiaryModalOpen] = useState(false);
   const [loanModalOpen, setLoanModalOpen] = useState(false);
   const [newAccountModalOpen, setNewAccountModalOpen] = useState(false);
   const [depositModalOpen, setDepositModalOpen] = useState(false);
-  const [transferTargetAccount, setTransferTargetAccount] = useState("");
 
-  // Check stored user on load
+  // ── NEW modal states ──
+  const [fdModalOpen, setFdModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [statementModalOpen, setStatementModalOpen] = useState(false);
+
   useEffect(() => {
     const storedUser = localStorage.getItem("bank_user");
-    const storedToken = localStorage.getItem("bank_token");
-    if (storedUser && storedToken) {
+    if (storedUser) {
       try {
-        const parsed = JSON.parse(storedUser);
-        setUser(parsed);
-        if (parsed.role === "admin") {
-          setActiveTab("admin");
-        }
-      } catch (e) {
-        localStorage.clear();
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem("bank_user");
+        localStorage.removeItem("bank_token");
       }
     }
   }, []);
 
-  // Fetch accounts when user logs in
+  const userId = user?._id || user?.id;
+
   useEffect(() => {
-    if (user?.id) {
-      loadCustomerAccounts();
+    if (userId) {
+      loadAccounts();
     }
   }, [user]);
 
-  // Periodic alert count check for admin
-  useEffect(() => {
-    if (user?.role === "admin") {
-      const checkAlerts = async () => {
-        try {
-          const stats = await api.getFraudStats();
-          setUnreadAlerts(stats?.pendingAlerts || 0);
-        } catch (e) {}
-      };
-      checkAlerts();
-      const intv = setInterval(checkAlerts, 5000);
-      return () => clearInterval(intv);
-    }
-  }, [user]);
-
-  const loadCustomerAccounts = async () => {
+  const loadAccounts = async () => {
     try {
-      const accList = await api.getCustomerAccounts(user.id);
-      setAccounts(accList);
-    } catch (err) {
-      console.error(err);
+      const accs = await api.getCustomerAccounts(userId);
+      setAccounts(accs);
+    } catch (e) {
+      console.error(e);
     }
+  };
+
+  const handleLogin = (userData) => {
+    setUser(userData);
+    localStorage.setItem("bank_user", JSON.stringify(userData));
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("bank_token");
-    localStorage.removeItem("bank_user");
     setUser(null);
     setAccounts([]);
-    setActiveTab("customer");
+    localStorage.removeItem("bank_user");
+    localStorage.removeItem("bank_token");
   };
 
-  const handleOpenTransfer = (targetAcc = "") => {
-    setTransferTargetAccount(targetAcc);
+  const handleOpenTransfer = (prefillAccount) => {
+    setTransferPrefill(prefillAccount || "");
     setTransferModalOpen(true);
   };
 
+  const handleTransferSuccess = () => {
+    setTransferModalOpen(false);
+    loadAccounts();
+  };
+
+  const handleAccountCreated = () => {
+    setNewAccountModalOpen(false);
+    loadAccounts();
+  };
+
+  const handleDepositSuccess = () => {
+    setDepositModalOpen(false);
+    loadAccounts();
+  };
+
+  // ── NEW: FD creation success ──
+  const handleFDSuccess = () => {
+    setFdModalOpen(false);
+    loadAccounts();
+  };
+
+  // ── NEW: Profile update success ──
+  const handleProfileSuccess = (updatedUser) => {
+    setProfileModalOpen(false);
+    if (updatedUser) {
+      setUser(updatedUser);
+    }
+  };
+
+  if (!user) {
+    return <AuthModal onLogin={handleLogin} />;
+  }
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      
-      {/* Navigation */}
+    <div style={{ minHeight: "100vh" }}>
       <Navbar
         user={user}
-        onLogout={handleLogout}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        unreadAlertsCount={unreadAlerts}
+        onTabChange={setActiveTab}
+        onLogout={handleLogout}
       />
 
-      {/* Main View Area */}
-      <main style={{ flex: 1 }}>
-        {!user ? (
-          <AuthModal onLoginSuccess={(loggedInUser) => setUser(loggedInUser)} />
-        ) : activeTab === "admin" && user.role === "admin" ? (
-          <AdminFraudCenter />
-        ) : (
-          <CustomerDashboard
-            user={user}
-            accounts={accounts}
-            onRefreshAccounts={loadCustomerAccounts}
-            onOpenTransfer={handleOpenTransfer}
-            onOpenBeneficiary={() => setBeneficiaryModalOpen(true)}
-            onOpenLoan={() => setLoanModalOpen(true)}
-            onOpenNewAccount={() => setNewAccountModalOpen(true)}
-            onOpenDeposit={() => setDepositModalOpen(true)}
-          />
-        )}
-      </main>
-
-      {/* Modals */}
-      {user && (
-        <>
-          <TransferModal
-            isOpen={transferModalOpen}
-            onClose={() => setTransferModalOpen(false)}
-            accounts={accounts}
-            defaultToAccount={transferTargetAccount}
-            onSuccess={loadCustomerAccounts}
-          />
-
-          <BeneficiaryModal
-            isOpen={beneficiaryModalOpen}
-            onClose={() => setBeneficiaryModalOpen(false)}
-            customerId={user.id}
-            onSuccess={() => {}}
-          />
-
-          <LoanModal
-            isOpen={loanModalOpen}
-            onClose={() => setLoanModalOpen(false)}
-            customerId={user.id}
-            onSuccess={() => {}}
-          />
-
-          <NewAccountModal
-            isOpen={newAccountModalOpen}
-            onClose={() => setNewAccountModalOpen(false)}
-            customerId={user.id}
-            onSuccess={loadCustomerAccounts}
-          />
-
-          <DepositModal
-            isOpen={depositModalOpen}
-            onClose={() => setDepositModalOpen(false)}
-            accounts={accounts}
-            onSuccess={loadCustomerAccounts}
-          />
-        </>
+      {activeTab === "customer" ? (
+        <CustomerDashboard
+          user={user}
+          accounts={accounts}
+          onRefreshAccounts={loadAccounts}
+          onOpenTransfer={handleOpenTransfer}
+          onOpenBeneficiary={() => setBeneficiaryModalOpen(true)}
+          onOpenLoan={() => setLoanModalOpen(true)}
+          onOpenNewAccount={() => setNewAccountModalOpen(true)}
+          onOpenDeposit={() => setDepositModalOpen(true)}
+          onOpenFD={() => setFdModalOpen(true)}
+          onOpenProfile={() => setProfileModalOpen(true)}
+          onOpenStatement={() => setStatementModalOpen(true)}
+        />
+      ) : (
+        <AdminFraudCenter />
       )}
 
-      {/* Footer */}
-      <footer style={{
-        textAlign: "center",
-        padding: "20px",
-        fontSize: "0.8rem",
-        color: "var(--text-dim)",
-        borderTop: "1px solid var(--border-color)",
-        background: "rgba(9, 13, 22, 0.8)"
-      }}>
-        Smart Digital Banking System with Real-Time Fraud Detection • Srijan Sengupta & Shubho Das • Review 3 Final Build
-      </footer>
+      {/* ── Existing Modals ── */}
+      {transferModalOpen && (
+        <TransferModal
+          accounts={accounts}
+          prefillToAccount={transferPrefill}
+          onClose={() => setTransferModalOpen(false)}
+          onSuccess={handleTransferSuccess}
+        />
+      )}
 
+      {beneficiaryModalOpen && (
+        <BeneficiaryModal
+          user={user}
+          onClose={() => setBeneficiaryModalOpen(false)}
+          onSuccess={() => setBeneficiaryModalOpen(false)}
+        />
+      )}
+
+      {loanModalOpen && (
+        <LoanModal
+          user={user}
+          onClose={() => setLoanModalOpen(false)}
+          onSuccess={() => setLoanModalOpen(false)}
+        />
+      )}
+
+      {newAccountModalOpen && (
+        <NewAccountModal
+          user={user}
+          onClose={() => setNewAccountModalOpen(false)}
+          onSuccess={handleAccountCreated}
+        />
+      )}
+
+      {depositModalOpen && (
+        <DepositModal
+          accounts={accounts}
+          onClose={() => setDepositModalOpen(false)}
+          onSuccess={handleDepositSuccess}
+        />
+      )}
+
+      {/* ── NEW Modals ── */}
+      {fdModalOpen && (
+        <FDModal
+          user={user}
+          accounts={accounts}
+          onClose={() => setFdModalOpen(false)}
+          onSuccess={handleFDSuccess}
+        />
+      )}
+
+      {profileModalOpen && (
+        <ProfileModal
+          user={user}
+          onClose={() => setProfileModalOpen(false)}
+          onSuccess={handleProfileSuccess}
+        />
+      )}
+
+      {statementModalOpen && (
+        <StatementModal
+          accounts={accounts}
+          onClose={() => setStatementModalOpen(false)}
+        />
+      )}
     </div>
   );
 }
+
+export default App;

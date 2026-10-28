@@ -17,7 +17,12 @@
     "mongodb",
     "change-streams",
     "transactions",
-    "rbac"
+    "rbac",
+    "capped-collection",
+    "text-index",
+    "lookup",
+    "facet",
+    "bucket"
   ],
   "author": "Srijan Sengupta & Shubho Das",
   "license": "ISC",

@@ -1,19 +1,9 @@
 const mongoose = require("mongoose");
 
 const beneficiarySchema = new mongoose.Schema({
+  customerId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer", required: true },
+  beneficiaryName: { type: String, required: true },
+  accountNumber: { type: String, required: true }
+}, { timestamps: true });
 
-    customerId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Customer"
-    },
-
-    beneficiaryName: String,
-
-    accountNumber: String
-
-});
-
-module.exports = mongoose.model(
-    "Beneficiary",
-    beneficiarySchema
-);
+module.exports = mongoose.model("Beneficiary", beneficiarySchema);

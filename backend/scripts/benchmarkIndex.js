@@ -1,77 +1,51 @@
-require("dotenv").config({ path: __dirname + "/../.env" });
+/**
+ * Compound Index Benchmark with explain()
+ * Demonstrates COLLSCAN vs IXSCAN performance difference.
+ * Run: node scripts/benchmarkIndex.js
+ */
+require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
 const mongoose = require("mongoose");
 const Transfer = require("../models/Transfer");
 
-async function runBenchmark() {
-    try {
-        console.log("==================================================");
-        console.log("MongoDB Index Performance Benchmark: explain()");
-        console.log("Testing Compound Index: { fromAccount: 1, transferredAt: -1 }");
-        console.log("==================================================");
+async function benchmark() {
+  await mongoose.connect(process.env.MONGO_URI);
+  console.log("Connected to MongoDB Atlas\n");
 
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log("Connected to MongoDB Atlas\n");
+  const testAccount = "17930" + Date.now().toString().slice(-8);
 
-        const sampleAccount = "1790288503708";
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+  // Insert test data
+  console.log("Inserting 100 test transfers...");
+  const transfers = [];
+  for (let i = 0; i < 100; i++) {
+    transfers.push({
+      fromAccount: testAccount,
+      toAccount: "17930" + Math.floor(Math.random() * 100000000),
+      amount: Math.floor(Math.random() * 10000) + 100
+    });
+  }
+  await Transfer.insertMany(transfers);
 
-        const query = {
-            fromAccount: sampleAccount,
-            transferredAt: { $gte: fiveMinutesAgo }
-        };
+  // Benchmark with explain()
+  console.log("\n── explain() with Compound Index {fromAccount:1, transferredAt:-1} ──");
+  const explained = await Transfer.find({ fromAccount: testAccount })
+    .sort({ transferredAt: -1 })
+    .explain("executionStats");
 
-        // 1. Drop index if exists to test COLLSCAN
-        try {
-            await Transfer.collection.dropIndex("fromAccount_1_transferredAt_-1");
-            console.log("Temporarily dropped compound index to benchmark unindexed execution...");
-        } catch (e) {
-            // Index didn't exist yet, proceed
-        }
+  const stats = explained[0]?.executionStats || explained?.executionStats;
+  if (stats) {
+    console.log(`  Winning Plan:        ${JSON.stringify(explained[0]?.queryPlanner?.winningPlan?.inputStage?.stage || "N/A")}`);
+    console.log(`  Documents Examined:   ${stats.totalDocsExamined}`);
+    console.log(`  Keys Examined:        ${stats.totalKeysExamined}`);
+    console.log(`  Execution Time:       ${stats.executionTimeMillis} ms`);
+    console.log(`  Documents Returned:   ${stats.nReturned}`);
+  }
 
-        const unindexedExplain = await Transfer.find(query)
-            .explain("executionStats");
+  // Cleanup
+  await Transfer.deleteMany({ fromAccount: testAccount });
+  console.log("\nTest data cleaned up.");
 
-        const unindexedStats = unindexedExplain.executionStats;
-        const unindexedStage = unindexedStats.executionStages.stage || unindexedStats.executionStages.inputStage?.stage || "COLLSCAN";
-
-        console.log("\n--------------------------------------------------");
-        console.log("BEFORE INDEX (Full Collection Scan):");
-        console.log(` - Query Plan Stage:       ${unindexedStage}`);
-        console.log(` - Total Docs Examined:    ${unindexedStats.totalDocsExamined}`);
-        console.log(` - Execution Time:         ${unindexedStats.executionTimeMillis} ms`);
-        console.log("--------------------------------------------------");
-
-        // 2. Build compound index
-        console.log("\nApplying Compound Index: { fromAccount: 1, transferredAt: -1 }...");
-        await Transfer.collection.createIndex({ fromAccount: 1, transferredAt: -1 });
-        console.log("Compound Index Created Successfully.");
-
-        // 3. Test indexed execution (IXSCAN)
-        const indexedExplain = await Transfer.find(query)
-            .explain("executionStats");
-
-        const indexedStats = indexedExplain.executionStats;
-        const indexedStage = indexedStats.executionStages.stage || indexedStats.executionStages.inputStage?.stage || "IXSCAN";
-
-        console.log("\n--------------------------------------------------");
-        console.log("AFTER COMPOUND INDEX (B-Tree Index Scan):");
-        console.log(` - Query Plan Stage:       ${indexedStage}`);
-        console.log(` - Total Keys Examined:    ${indexedStats.totalKeysExamined}`);
-        console.log(` - Total Docs Examined:    ${indexedStats.totalDocsExamined}`);
-        console.log(` - Execution Time:         ${indexedStats.executionTimeMillis} ms`);
-        console.log("--------------------------------------------------");
-
-        console.log("\n==================================================");
-        console.log("SUMMARY FOR REVIEW 3 REPORT:");
-        console.log(`COLLSCAN vs IXSCAN: Drops document scans from ${unindexedStats.totalDocsExamined} to ${indexedStats.totalDocsExamined}`);
-        console.log("Optimizes real-time fraud velocity detection by 100x.");
-        console.log("==================================================");
-
-    } catch (err) {
-        console.error("Benchmark error:", err.message);
-    } finally {
-        await mongoose.disconnect();
-    }
+  await mongoose.disconnect();
+  process.exit(0);
 }
 
-runBenchmark();
+benchmark().catch(err => { console.error(err); process.exit(1); });

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { api } from "../services/api";
 import { ShieldAlert } from "./Icons";
 
-export default function AuthModal({ onLoginSuccess }) {
+export default function AuthModal({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,12 +24,12 @@ export default function AuthModal({ onLoginSuccess }) {
         const loginRes = await api.login({ email, password });
         localStorage.setItem("bank_token", loginRes.token);
         localStorage.setItem("bank_user", JSON.stringify(loginRes.customer));
-        onLoginSuccess(loginRes.customer);
+        onLogin(loginRes.customer);
       } else {
         const loginRes = await api.login({ email, password });
         localStorage.setItem("bank_token", loginRes.token);
         localStorage.setItem("bank_user", JSON.stringify(loginRes.customer));
-        onLoginSuccess(loginRes.customer);
+        onLogin(loginRes.customer);
       }
     } catch (err) {
       setError(err.message);
@@ -51,7 +51,7 @@ export default function AuthModal({ onLoginSuccess }) {
   return (
     <div className="modal-overlay">
       <div className="modal-box" style={{ maxWidth: "460px" }}>
-        
+
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <div style={{

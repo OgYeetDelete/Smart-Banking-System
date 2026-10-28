@@ -1,11 +1,11 @@
 import React from "react";
 import { ShieldAlert, Activity, LogOut, Users } from "./Icons";
 
-export default function Navbar({ user, onLogout, activeTab, setActiveTab, unreadAlertsCount }) {
+export default function Navbar({ user, onLogout, activeTab, onTabChange, unreadAlertsCount }) {
   return (
     <header className="glass-panel" style={{ margin: "16px 24px", padding: "14px 24px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        
+
         {/* Brand */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div style={{
@@ -36,7 +36,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab, unread
         {user && (
           <nav style={{ display: "flex", gap: "8px", background: "rgba(15, 23, 42, 0.6)", padding: "4px", borderRadius: "12px", border: "1px solid var(--border-color)" }}>
             <button
-              onClick={() => setActiveTab("customer")}
+              onClick={() => onTabChange("customer")}
               className={`btn btn-sm ${activeTab === "customer" ? "btn-primary" : "btn-secondary"}`}
             >
               Customer Banking
@@ -44,7 +44,7 @@ export default function Navbar({ user, onLogout, activeTab, setActiveTab, unread
 
             {user.role === "admin" && (
               <button
-                onClick={() => setActiveTab("admin")}
+                onClick={() => onTabChange("admin")}
                 className={`btn btn-sm ${activeTab === "admin" ? "btn-danger" : "btn-secondary"}`}
                 style={{ position: "relative" }}
               >

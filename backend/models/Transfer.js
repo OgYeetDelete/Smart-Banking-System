@@ -1,36 +1,13 @@
 const mongoose = require("mongoose");
 
 const transferSchema = new mongoose.Schema({
-
-    fromAccount: {
-        type: String,
-        required: [true, "Sender account number is required"],
-        index: true
-    },
-
-    toAccount: {
-        type: String,
-        required: [true, "Receiver account number is required"],
-        index: true
-    },
-
-    amount: {
-        type: Number,
-        required: [true, "Transfer amount is required"],
-        min: [1, "Transfer amount must be at least 1"]
-    },
-
-    transferredAt: {
-        type: Date,
-        default: Date.now
-    }
-
+  fromAccount: { type: String, required: true },
+  toAccount: { type: String, required: true },
+  amount: { type: Number, required: true, min: 1 },
+  transferredAt: { type: Date, default: Date.now }
 });
 
-// Compound Index: Optimizes velocity checks (time window queries) and statement lookups
+// Compound index for fast history lookups + fraud engine velocity checks
 transferSchema.index({ fromAccount: 1, transferredAt: -1 });
 
-module.exports = mongoose.model(
-    "Transfer",
-    transferSchema
-);
+module.exports = mongoose.model("Transfer", transferSchema);

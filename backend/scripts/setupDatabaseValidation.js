@@ -1,114 +1,92 @@
-require("dotenv").config({ path: __dirname + "/../.env" });
-const mongoose = require("mongoose");
-
 /**
- * Applies MongoDB Collection-Level $jsonSchema Validation Rules
- * Directly enforces database-engine integrity constraints regardless of client or application.
+ * $jsonSchema Database-Level Validation
+ * Applies MongoDB schema validators via collMod command.
+ * Run: node scripts/setupDatabaseValidation.js
  */
-async function setupDatabaseValidation() {
-    try {
-        console.log("==================================================");
-        console.log("Configuring Database-Level $jsonSchema Validation");
-        console.log("==================================================");
+require("dotenv").config({ path: require("path").join(__dirname, "..", ".env") });
+const { MongoClient } = require("mongodb");
 
-        await mongoose.connect(process.env.MONGO_URI);
-        const db = mongoose.connection.db;
+async function setup() {
+  const client = new MongoClient(process.env.MONGO_URI);
+  await client.connect();
+  const db = client.db();
 
-        console.log("Connected to MongoDB Atlas.");
+  console.log("Applying $jsonSchema validators...\n");
 
-        // 1. Enforce validation on 'accounts' collection
-        console.log("\n1. Applying schema validator on 'accounts' collection...");
-        try {
-            await db.command({
-                collMod: "accounts",
-                validator: {
-                    $jsonSchema: {
-                        bsonType: "object",
-                        required: ["customerId", "accountNumber", "accountType", "balance"],
-                        properties: {
-                            customerId: {
-                                bsonType: "objectId",
-                                description: "Must be a valid ObjectId reference to customer"
-                            },
-                            accountNumber: {
-                                bsonType: "string",
-                                description: "Must be a unique string"
-                            },
-                            accountType: {
-                                enum: ["Savings", "Current", "Salary"],
-                                description: "Can only be Savings, Current, or Salary"
-                            },
-                            balance: {
-                                bsonType: "number",
-                                minimum: 0,
-                                description: "Account balance cannot fall below 0"
-                            }
-                        }
-                    }
-                },
-                validationLevel: "moderate",
-                validationAction: "error"
-            });
-            console.log("✔ 'accounts' schema validation applied (balance >= 0 enforced at DB level).");
-        } catch (err) {
-            console.warn("Notice on 'accounts' validator:", err.message);
+  // Validate Customers
+  await db.command({
+    collMod: "customers",
+    validator: {
+      $jsonSchema: {
+        bsonType: "object",
+        required: ["name", "email", "password"],
+        properties: {
+          name: { bsonType: "string", description: "must be a string and is required" },
+          email: { bsonType: "string", pattern: "^.+@.+\\..+$", description: "must be a valid email" },
+          password: { bsonType: "string", minLength: 6, description: "must be at least 6 characters" },
+          role: { enum: ["customer", "admin"], description: "must be customer or admin" }
         }
+      }
+    },
+    validationLevel: "moderate"
+  });
+  console.log("✓ customers collection validator applied");
 
-        // 2. Enforce validation on 'transfers' collection
-        console.log("\n2. Applying schema validator on 'transfers' collection...");
-        try {
-            await db.command({
-                collMod: "transfers",
-                validator: {
-                    $jsonSchema: {
-                        bsonType: "object",
-                        required: ["fromAccount", "toAccount", "amount", "transferredAt"],
-                        properties: {
-                            fromAccount: {
-                                bsonType: "string",
-                                description: "Sender account number is required"
-                            },
-                            toAccount: {
-                                bsonType: "string",
-                                description: "Receiver account number is required"
-                            },
-                            amount: {
-                                bsonType: "number",
-                                minimum: 1,
-                                description: "Transfer amount must be at least ₹1"
-                            },
-                            transferredAt: {
-                                bsonType: "date",
-                                description: "Must be a valid timestamp"
-                            }
-                        }
-                    }
-                },
-                validationLevel: "moderate",
-                validationAction: "error"
-            });
-            console.log("✔ 'transfers' schema validation applied (amount >= 1 enforced at DB level).");
-        } catch (err) {
-            console.warn("Notice on 'transfers' validator:", err.message);
+  // Validate Accounts
+  await db.command({
+    collMod: "accounts",
+    validator: {
+      $jsonSchema: {
+        bsonType: "object",
+        required: ["customerId", "accountNumber", "accountType"],
+        properties: {
+          accountType: { enum: ["Savings", "Current", "Salary"], description: "must be Savings, Current, or Salary" },
+          balance: { bsonType: "number", minimum: 0, description: "balance cannot be negative" },
+          isFrozen: { bsonType: "bool", description: "must be a boolean" }
         }
+      }
+    },
+    validationLevel: "moderate"
+  });
+  console.log("✓ accounts collection validator applied (includes isFrozen)");
 
-        // 3. Enforce Compound Index on transfers
-        console.log("\n3. Enforcing Compound Index on 'transfers' collection...");
-        await db.collection("transfers").createIndex(
-            { fromAccount: 1, transferredAt: -1 },
-            { name: "fromAccount_1_transferredAt_-1", background: true }
-        );
-        console.log("✔ Compound index { fromAccount: 1, transferredAt: -1 } verified.");
+  // Validate Transfers
+  await db.command({
+    collMod: "transfers",
+    validator: {
+      $jsonSchema: {
+        bsonType: "object",
+        required: ["fromAccount", "toAccount", "amount"],
+        properties: {
+          amount: { bsonType: "number", minimum: 1, description: "transfer amount must be at least 1" }
+        }
+      }
+    },
+    validationLevel: "moderate"
+  });
+  console.log("✓ transfers collection validator applied");
 
-        console.log("\n==================================================");
-        console.log("Database-Level Schema Validation Setup Complete!");
-        console.log("==================================================");
+  // Validate Fixed Deposits
+  await db.command({
+    collMod: "fixeddeposits",
+    validator: {
+      $jsonSchema: {
+        bsonType: "object",
+        required: ["customerId", "accountId", "principal", "interestRate", "tenureMonths"],
+        properties: {
+          principal: { bsonType: "number", minimum: 1000, description: "minimum FD is ₹1,000" },
+          tenureMonths: { bsonType: "number", minimum: 1, description: "minimum tenure is 1 month" },
+          status: { enum: ["Active", "Matured", "Withdrawn"], description: "must be a valid FD status" }
+        }
+      }
+    },
+    validationLevel: "moderate"
+  });
+  console.log("✓ fixeddeposits collection validator applied");
 
-    } catch (err) {
-        console.error("Setup validation error:", err.message);
-    } finally {
-        await mongoose.disconnect();
-    }
+  console.log("\nAll $jsonSchema validators applied successfully!");
+  await client.close();
+  process.exit(0);
 }
 
-setupDatabaseValidation();
+setup().catch(err => { console.error(err); process.exit(1); });

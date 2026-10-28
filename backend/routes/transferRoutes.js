@@ -1,17 +1,19 @@
 const express = require("express");
 const router = express.Router();
+const transferController = require("../controllers/transferController");
+const { verifyToken, requireAdmin } = require("../middleware/authMiddleware");
 
-const {
-    transferFunds,
-    getTransferHistory,
-    spendingAnalytics
-} = require("../controllers/transferController");
+router.post("/transfer", verifyToken, transferController.transferFunds);
+router.get("/history/:accountNumber", verifyToken, transferController.getTransferHistory);
+router.get("/analytics/spending", verifyToken, transferController.spendingAnalytics);
 
-const { verifyToken } = require("../middleware/authMiddleware");
+// ── NEW: Date-Range Statement (User Functionality #5) ──
+router.get("/statement/:accountNumber", verifyToken, transferController.getStatement);
 
-// Protected Transfer Endpoints
-router.post("/transfer", verifyToken, transferFunds);
-router.get("/history/:accountNumber", verifyToken, getTransferHistory);
-router.get("/analytics/spending", verifyToken, spendingAnalytics);
+// ── NEW: $lookup — Transfers with Customer Names (MongoDB Functionality #1) ──
+router.get("/enriched", verifyToken, requireAdmin, transferController.getTransfersWithCustomerNames);
+
+// ── NEW: $bucket — Transaction Distribution (MongoDB Functionality #4) ──
+router.get("/analytics/distribution", verifyToken, transferController.getTransactionDistribution);
 
 module.exports = router;
